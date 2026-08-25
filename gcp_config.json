@@ -1,0 +1,39 @@
+{
+  "project_id": "synapse-node-hackathon",
+  "architecture_recommendation": {
+    "primary_compute": {
+      "service": "Google Cloud Run",
+      "reason": "Serverless container compute auto-scaling 0 to 1,000 instances, pay-per-millisecond billing, rapid sub-5-minute deployments, hosts core REST APIs and sub-150ms Task Master ILP solvers."
+    },
+    "primary_database": {
+      "service": "Google Cloud Firestore",
+      "reason": "Serverless NoSQL Document DB with native real-time client sync listeners, 99.999% availability SLA, built-in vector search integration, ideal for real-time task queue and agent pattern persistence."
+    },
+    "async_middleware": {
+      "service": "Google Cloud Pub/Sub",
+      "reason": "Asynchronous event bus handling high-throughput messaging, regional exactly-once delivery guarantees, and dead-letter queue routing for non-blocking agent behavioral nudges."
+    }
+  },
+  "deployment_settings": {
+    "cloud_run": {
+      "service_name": "synapse-node-backend",
+      "region": "us-central1",
+      "min_instances": 0,
+      "max_instances": 100,
+      "cpu": "1",
+      "memory": "512Mi",
+      "concurrency": 80
+    },
+    "cloud_firestore": {
+      "database_id": "(default)",
+      "mode": "FIRESTORE_NATIVE",
+      "location": "us-central"
+    },
+    "cloud_pubsub": {
+      "topic_name": "synapse-agent-nudges",
+      "subscription_name": "synapse-agent-nudge-sub",
+      "ack_deadline_seconds": 10,
+      "enable_exactly_once_delivery": true
+    }
+  }
+}

@@ -1,0 +1,33 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.so
+
+# Packaging / test artifacts
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Credentials and local config
+*.key
+*.pem
+service-account*.json
+.env
+.env.*
+
+# Editor / OS
+.DS_Store
+*.swp
+
+# Generated at runtime by the local Firestore fallback store
+app/local_firestore_db.json

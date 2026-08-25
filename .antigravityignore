@@ -1,0 +1,10 @@
+# Keep the Antigravity agent out of large generated trees.
+# The language server snapshots untracked files for context; a 449MB venv
+# of binary .pyc files stalls prompt handling.
+venv/
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+.git/
+pdf_text.txt

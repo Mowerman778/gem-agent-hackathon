@@ -1,0 +1,25 @@
+# Never ship the local virtualenv - its arm64 binaries conflict with the
+# image's own `pip install -r requirements.txt` and add ~449MB.
+venv/
+.venv/
+env/
+
+__pycache__/
+*.py[cod]
+
+.git/
+.gitignore
+.dockerignore
+.antigravityignore
+
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local-only artifacts
+app/local_firestore_db.json
+pdf_text.txt
+*.md
+.env
+.env.*

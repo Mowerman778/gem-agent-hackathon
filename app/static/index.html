@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SynapseNode — Dynamic Task Master & GCP Architecture</title>
+  <meta name="description" content="Algorithmic Task Optimization & Behavioral Agent platform powered by Google Cloud Run, Cloud Firestore, and Cloud Pub/Sub.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="header">
+    <div class="brand-container">
+      <div class="brand-logo">⚡</div>
+      <div>
+        <h1 class="brand-title">SynapseNode</h1>
+        <p class="brand-subtitle">Algorithmic Domestic Task Orchestration & Behavioral Companion</p>
+      </div>
+    </div>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <span class="status-badge active" id="id-solver-speed-badge">⚡ Sub-150ms Solver Ready</span>
+      <button class="btn-secondary" id="id-btn-refresh-status" onclick="app.fetchStatus()">🔄 System Status</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- GCP Service Combination Architecture Matrix -->
+    <section aria-label="GCP Infrastructure Combination" class="gcp-services-matrix">
+      
+      <!-- Cloud Run Card -->
+      <article class="gcp-card cloud-run" id="id-card-cloud-run">
+        <div class="gcp-card-header">
+          <h2 class="gcp-service-title">
+            <span>🚀 Cloud Run</span>
+          </h2>
+          <span class="status-badge active">Active Container</span>
+        </div>
+        <div class="gcp-card-body">
+          <p><strong>Function:</strong> Core REST APIs & 0-1 ILP Task Master Matrix Solver</p>
+          <p><strong>Scaling Model:</strong> Auto-scales 0 to 1,000 instances | Serverless Pay-per-ms</p>
+          <p><strong>Latency:</strong> <span class="gcp-pill" id="id-cloud-run-solve-time">Solver: ~110ms</span></p>
+        </div>
+      </article>
+
+      <!-- Cloud Firestore Card -->
+      <article class="gcp-card cloud-firestore" id="id-card-cloud-firestore">
+        <div class="gcp-card-header">
+          <h2 class="gcp-service-title">
+            <span>🔥 Cloud Firestore</span>
+          </h2>
+          <span class="status-badge active" id="id-firestore-mode">Synced NoSQL</span>
+        </div>
+        <div class="gcp-card-body">
+          <p><strong>Function:</strong> Primary state, client sync & behavioral habit factor persistence</p>
+          <p><strong>Features:</strong> Real-time document sync | Vector search readiness | 99.999% SLA</p>
+          <p><strong>State:</strong> <span class="gcp-pill" id="id-firestore-doc-count">0 tasks saved</span></p>
+        </div>
+      </article>
+
+      <!-- Cloud Pub/Sub Card -->
+      <article class="gcp-card cloud-pubsub" id="id-card-cloud-pubsub">
+        <div class="gcp-card-header">
+          <h2 class="gcp-service-title">
+            <span>📡 Cloud Pub/Sub</span>
+          </h2>
+          <span class="status-badge active">Async Event Bus</span>
+        </div>
+        <div class="gcp-card-body">
+          <p><strong>Function:</strong> Decoupled event messaging for background agent nudges</p>
+          <p><strong>Guarantee:</strong> Regional Exactly-Once Delivery & Dead-Letter Routing</p>
+          <p><strong>Topic:</strong> <span class="gcp-pill">synapse-agent-nudges</span></p>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+
+      <!-- Left Column: Task Ingestion & Energy Envelope -->
+      <div style="display: flex; flex-direction: column; gap: 30px;">
+        
+        <!-- Unstructured Task Ingestion Panel -->
+        <section class="panel-card" id="id-panel-ingestion">
+          <div class="panel-header">
+            <h2 class="panel-title">📥 Unstructured Task Ingestion</h2>
+            <span class="status-badge active">NLP Parser</span>
+          </div>
+
+          <p style="font-size: 13.5px; color: var(--text-muted);">
+            Paste natural language household tasks. SynapseNode automatically parses effort, infers prerequisite dependencies, and builds an acyclic graph (DAG).
+          </p>
+
+          <textarea id="id-input-raw-tasks" class="text-area-custom" placeholder="e.g.
+- Clean garage after moving lawnmower
+- Move lawnmower then clear doorway
+- Organize desk and audit monthly receipts
+- Water garden plants"></textarea>
+
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="preset-buttons">
+              <button class="btn-secondary" id="id-btn-preset-1" onclick="app.usePreset(1)">Preset A (Garage & Yard)</button>
+              <button class="btn-secondary" id="id-btn-preset-2" onclick="app.usePreset(2)">Preset B (Home Office)</button>
+            </div>
+            <button class="btn-primary" id="id-btn-ingest-tasks" onclick="app.ingestTasks()">
+              <span>⚡ Ingest & Build DAG</span>
+            </button>
+          </div>
+
+          <!-- DAG Cycle Resolutions Log -->
+          <div id="id-dag-resolution-log" style="display: none; background: rgba(245, 158, 11, 0.1); border: 1px solid var(--accent-amber); border-radius: 8px; padding: 12px; font-size: 13px; color: var(--accent-amber);">
+            <strong>DAG Cycle Resolution:</strong>
+            <div id="id-resolution-log-body"></div>
+          </div>
+        </section>
+
+        <!-- Task Master Solver & Energy Capacity Envelope -->
+        <section class="panel-card" id="id-panel-solver">
+          <div class="panel-header">
+            <h2 class="panel-title">🧮 Task Master ILP Optimization Solver</h2>
+            <span class="priority-badge" id="id-solver-status">Ready</span>
+          </div>
+
+          <div class="slider-container">
+            <div class="slider-label-row">
+              <label for="id-range-user-energy">User Energy Capacity Envelope (E_capacity):</label>
+              <span id="id-val-user-energy" style="color: var(--accent-cyan); font-weight: 700;">8.0 / 10</span>
+            </div>
+            <input type="range" id="id-range-user-energy" min="1" max="15" step="0.5" value="8.0" oninput="app.updateEnergy(this.value)">
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; color: var(--text-muted);">
+              Mathematical Model: <strong>Maximize ∑ P_i(t) · x_i</strong> s.t. <strong>∑ E_i · x_i ≤ E_capacity</strong>
+            </div>
+            <button class="btn-primary" id="id-btn-run-solver" onclick="app.runILPSolver()">
+              <span>🚀 Solve Optimization</span>
+            </button>
+          </div>
+
+          <!-- Optimal Schedule Result Output -->
+          <div id="id-solver-results" style="display: none; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13.5px; background: rgba(6, 182, 212, 0.1); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.3);">
+              <span>Target Utility: <strong id="id-res-total-utility" style="color: var(--accent-cyan);">0.0</strong></span>
+              <span>Effort Used: <strong id="id-res-effort-used">0.0</strong> / <span id="id-res-energy-cap">8.0</span></span>
+              <span>Solve Speed: <strong id="id-res-solve-time" style="color: var(--accent-emerald);">0ms</strong></span>
+            </div>
+
+            <div id="id-optimal-task-list" class="task-list"></div>
+          </div>
+
+        </section>
+
+      </div>
+
+      <!-- Right Column: Queue Details & Empathetic Agent -->
+      <div style="display: flex; flex-direction: column; gap: 30px;">
+        
+        <!-- Live Task Master Queue & Priority Matrix -->
+        <section class="panel-card" id="id-panel-queue">
+          <div class="panel-header">
+            <h2 class="panel-title">📋 Live Priority Queue & Math Breakdown</h2>
+            <span class="status-badge active" id="id-task-count-badge">0 Tasks</span>
+          </div>
+
+          <div id="id-all-task-list" class="task-list">
+            <div style="text-align: center; color: var(--text-muted); padding: 30px 0;">
+              No tasks ingested yet. Enter tasks on the left to activate optimization.
+            </div>
+          </div>
+        </section>
+
+        <!-- Empathetic Agentic Behavioral Companion Panel -->
+        <section class="panel-card" id="id-panel-agent">
+          <div class="panel-header">
+            <h2 class="panel-title">🤖 Empathetic Agent Companion</h2>
+            <span class="status-badge active" style="background: rgba(168, 85, 247, 0.2); color: var(--accent-purple);">B(t) Cognitive Throttling</span>
+          </div>
+
+          <p style="font-size: 13.5px; color: var(--text-muted);">
+            Monitors behavioral momentum and protects against cognitive fatigue using boundary function <code>B(t) = θ(R_user - K_th(1 + ρ_density))</code>.
+          </p>
+
+          <div class="nudge-stream" id="id-agent-nudge-stream">
+            <div class="nudge-card">
+              <span>🌱 <em>Agent initialized. Pub/Sub listener active for non-intrusive habit nudges.</em></span>
+              <span style="font-size: 11px; opacity: 0.7;">Ready</span>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 12px; color: var(--text-muted);">
+            <span>Feedback Density (ρ_density): <strong id="id-val-feedback-density" style="color: var(--accent-purple);">0.0 msg/min</strong></span>
+            <span>Pub/Sub Subscriptions: <strong>Active</strong></span>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Adaptive Entropy Diagnostic Modal -->
+  <div class="modal-overlay" id="id-diagnostic-modal" style="display: none;">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--accent-cyan);">⚡ Adaptive Entropy Assessment</h3>
+        <span class="status-badge active">Entropy > 0.25</span>
+      </div>
+
+      <p style="font-size: 14px; color: var(--text-muted);" id="id-diag-question-text">
+        System evaluated high task uncertainty. Answer 1 prompt to minimize information entropy:
+      </p>
+
+      <div id="id-diag-options-container" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Option buttons inserted dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
