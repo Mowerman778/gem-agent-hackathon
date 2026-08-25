@@ -8,9 +8,12 @@ logger = logging.getLogger("SynapseNode.AgentCompanion")
 
 # Gemini is reached through Vertex AI deliberately: hackathon promotional credits
 # apply to Vertex model usage, while standalone AI Studio API keys bill separately.
+# Location must be "global" - every Gemini 3.x model 404s in us-central1, which
+# only serves 2.5 and below. Cloud Run still deploys to us-central1; the two are
+# unrelated settings.
 DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
-DEFAULT_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-DEFAULT_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "synapse-node-hackathon")
+DEFAULT_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
+DEFAULT_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "gen-lang-client-0411709036")
 
 # Nudges are one sentence; capping output is the main per-call cost lever.
 MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "120"))
@@ -75,9 +78,15 @@ class AgenticBehavioralCompanion:
         self._init_model_client()
 
     def _init_model_client(self):
-        # Mirrors FirestoreService: only reach for the cloud when credentials exist,
-        # otherwise local runs would stall on ADC lookups that cannot succeed.
-        if not (os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("GOOGLE_CLOUD_PROJECT")):
+        # Only reach for the cloud when credentials actually resolve, otherwise local
+        # runs would pay a failed API round trip on every nudge. google.auth.default()
+        # is the one check that covers all three sources: the GOOGLE_APPLICATION_
+        # CREDENTIALS env var, the well-known ADC file written by `gcloud auth
+        # application-default login`, and the metadata server on Cloud Run.
+        try:
+            import google.auth
+            google.auth.default()
+        except Exception:
             logger.info("GCP credentials not found; behavioural nudges will use local templates.")
             return
         try:
@@ -126,6 +135,10 @@ class AgenticBehavioralCompanion:
                     "system_instruction": SYSTEM_INSTRUCTION,
                     "max_output_tokens": MAX_OUTPUT_TOKENS,
                     "temperature": 0.9,
+                    # Gemini 3.x reasons before answering and those tokens are billed
+                    # and counted against max_output_tokens. A one-sentence nudge needs
+                    # no deliberation, and leaving it on truncates the reply to nothing.
+                    "thinking_config": {"thinking_budget": 0},
                 },
             )
             message = (response.text or "").strip()

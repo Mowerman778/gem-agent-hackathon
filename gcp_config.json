@@ -1,5 +1,5 @@
 {
-  "project_id": "synapse-node-hackathon",
+  "project_id": "gen-lang-client-0411709036",
   "architecture_recommendation": {
     "primary_compute": {
       "service": "Google Cloud Run",

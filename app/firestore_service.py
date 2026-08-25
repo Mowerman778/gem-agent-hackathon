@@ -11,7 +11,7 @@ class FirestoreService:
     Connects to Google Cloud Firestore using google-cloud-firestore SDK.
     Includes a local fallback store for seamless offline execution.
     """
-    def __init__(self, project_id: str = "synapse-node-hackathon"):
+    def __init__(self, project_id: str = "gen-lang-client-0411709036"):
         self.project_id = project_id
         self.using_gcp_native = False
         self.client = None

@@ -17,6 +17,7 @@ from app.dag_engine import TaskDAGEngine
 from app.agent_companion import AgenticBehavioralCompanion
 from app.firestore_service import FirestoreService
 from app.pubsub_service import PubSubService
+from app.collaborative_partner import CollaborativePartner
 
 app = FastAPI(
     title="SynapseNode Core REST API & Task Master Solver",
@@ -28,6 +29,13 @@ app = FastAPI(
 firestore_db = FirestoreService()
 pubsub_bus = PubSubService()
 agent_companion = AgenticBehavioralCompanion()
+
+# Plans WITH the user, weighing rest and health against throughput. Distinct from
+# the ILP solver, which optimises the queue without consulting anyone.
+collaborative_partner = CollaborativePartner(
+    firestore_service=firestore_db,
+    entropy_score_fn=evaluate_task_queue_entropy,
+)
 
 # In-memory session state for instant UI updates
 session_answered_questions = []
@@ -60,6 +68,10 @@ class UserStateUpdateRequest(BaseModel):
 class DiagnosticAnswerRequest(BaseModel):
     question_id: str
     value: Any
+
+class PartnerChatRequest(BaseModel):
+    message: str
+    session_id: str = "default"
 
 # Serve static files
 static_dir = os.path.join(os.path.dirname(__file__), "static")
@@ -242,6 +254,27 @@ def get_agent_nudges():
 
     store = firestore_db._read_local_store()
     return {"nudges": store.get("agent_history", [])[-10:]}
+
+
+@app.post("/api/partner/chat")
+def partner_chat(req: PartnerChatRequest):
+    """
+    One turn with the Collaborative Partner. It reads the live task queue and
+    wellbeing signals through its own tools before it answers, and may well
+    suggest doing less.
+    """
+    result = collaborative_partner.converse(req.message, session_id=req.session_id)
+    if result.get("available") is False:
+        raise HTTPException(status_code=503, detail=result.get("reason"))
+    if result.get("error"):
+        raise HTTPException(status_code=502, detail=result["error"])
+    return result
+
+
+@app.post("/api/partner/reset")
+def partner_reset(session_id: str = "default"):
+    """Starts the conversation over."""
+    return {"reset": collaborative_partner.reset(session_id), "session_id": session_id}
 
 
 if __name__ == "__main__":
