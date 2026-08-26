@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# synapsectl - the gcloud workflow for SynapseNode, in one place.
+#
+# Wraps `gcloud run ...` so the project, region and service never have to be
+# retyped. Everything it does is a plain gcloud call; run with SYNAPSE_DEBUG=1
+# to see each one echoed before it executes.
+set -euo pipefail
+
+PROJECT="${SYNAPSE_PROJECT:-gen-lang-client-0411709036}"
+REGION="${SYNAPSE_REGION:-us-central1}"
+SERVICE="${SYNAPSE_SERVICE:-synapse-node-backend}"
+MAX_INSTANCES="${SYNAPSE_MAX_INSTANCES:-3}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+command -v gcloud >/dev/null || { echo "gcloud not on PATH (try /snap/bin)"; exit 1; }
+
+g() {
+  [ -n "${SYNAPSE_DEBUG:-}" ] && echo "+ gcloud $*" >&2
+  gcloud "$@" --project "$PROJECT"
+}
+
+usage() {
+  cat <<USAGE
+synapsectl <command>
+
+  deploy     build from source and deploy to Cloud Run (private, capped at $MAX_INSTANCES)
+  proxy      serve the private service at http://localhost:8080
+  url        print the service URL
+  status     revision, traffic, instance cap and env vars
+  logs       tail recent logs
+  open       public   make the service reachable without a token
+  close      private  revoke public access (the safe default)
+  teardown   delete the service, stopping all spend
+
+Project $PROJECT / region $REGION / service $SERVICE
+Override with SYNAPSE_PROJECT, SYNAPSE_REGION, SYNAPSE_SERVICE.
+USAGE
+}
+
+case "${1:-}" in
+  deploy)
+    g run deploy "$SERVICE" \
+      --source "$REPO_ROOT" \
+      --region "$REGION" \
+      --max-instances "$MAX_INSTANCES" \
+      --no-allow-unauthenticated \
+      --set-env-vars "GOOGLE_CLOUD_PROJECT=$PROJECT,GOOGLE_CLOUD_LOCATION=global"
+    ;;
+  proxy)
+    exec python3 "$REPO_ROOT/scripts/run_proxy.py" \
+      --service "$SERVICE" --region "$REGION" --port "${2:-8080}"
+    ;;
+  url)
+    g run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)'
+    ;;
+  status)
+    g run services describe "$SERVICE" --region "$REGION" --format \
+      'value[separator="
+"](status.latestReadyRevisionName,
+         status.traffic[0].percent,
+         spec.template.metadata.annotations["autoscaling.knative.dev/maxScale"],
+         spec.template.spec.containers[0].env)'
+    echo "--- public access ---"
+    if g run services get-iam-policy "$SERVICE" --region "$REGION" 2>/dev/null | grep -q allUsers; then
+      echo "PUBLIC - anyone can invoke this and spend your credits"
+    else
+      echo "private - identity token required"
+    fi
+    ;;
+  logs)
+    g run services logs read "$SERVICE" --region "$REGION" --limit "${2:-50}"
+    ;;
+  open)
+    read -rp "Make $SERVICE callable by anyone on the internet? [y/N] " ok
+    [ "$ok" = "y" ] || { echo "cancelled"; exit 0; }
+    g run services add-iam-policy-binding "$SERVICE" --region "$REGION" \
+      --member allUsers --role roles/run.invoker
+    ;;
+  close)
+    g run services remove-iam-policy-binding "$SERVICE" --region "$REGION" \
+      --member allUsers --role roles/run.invoker
+    ;;
+  teardown)
+    read -rp "Delete $SERVICE permanently? [y/N] " ok
+    [ "$ok" = "y" ] || { echo "cancelled"; exit 0; }
+    g run services delete "$SERVICE" --region "$REGION" --quiet
+    ;;
+  *) usage ;;
+esac
