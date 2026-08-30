@@ -111,8 +111,8 @@ Review administrative budget breakdown`;
         <div class="task-info">
           <div class="task-title">${t.title}</div>
           <div class="task-meta">
-            <span>Effort needed: <strong>${t.effort || 5}</strong></span>
-            <span>Energy needed: <strong>${t.required_energy || 5}</strong></span>
+            <span>Takes about <strong>${this.formatMinutes(t.effort || 30)}</strong></span>
+            <span><strong>${this.drainWord(t.required_energy)}</strong></span>
             ${t.prerequisites && t.prerequisites.length > 0 ? `<span>Do after: ${t.prerequisites.map(id => this.taskTitle(id)).join(', ')}</span>` : ''}
           </div>
         </div>
@@ -125,6 +125,21 @@ Review administrative budget breakdown`;
         </div>
       </div>
     `).join("");
+  },
+
+  // Task effort is minutes. Show it as time a person recognises.
+  formatMinutes: function(mins) {
+    const m = Math.round(parseFloat(mins) || 0);
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60), r = m % 60;
+    if (r === 0) return h === 1 ? "1 hour" : `${h} hours`;
+    return `${h}h ${r}m`;
+  },
+
+  DRAIN_WORDS: { 3: "easy going", 5: "middling", 8: "heavy going" },
+  drainWord: function(v) {
+    const n = parseFloat(v) || 5;
+    return n <= 3.5 ? this.DRAIN_WORDS[3] : (n >= 7 ? this.DRAIN_WORDS[8] : this.DRAIN_WORDS[5]);
   },
 
   taskTitle: function(id) {
@@ -242,8 +257,10 @@ Review administrative budget breakdown`;
       resultsDiv.style.display = "flex";
 
       document.getElementById("id-res-total-utility").innerText = data.total_priority || 0.0;
-      document.getElementById("id-res-effort-used").innerText = data.total_effort_used || 0.0;
-      document.getElementById("id-res-energy-cap").innerText = data.energy_capacity || this.userEnergy;
+      // both come back in minutes from the solver
+      document.getElementById("id-res-effort-used").innerText = this.formatMinutes(data.total_effort_used || 0);
+      document.getElementById("id-res-energy-cap").innerText =
+        this.formatMinutes(data.energy_capacity || this.userTime * 60);
       document.getElementById("id-res-solve-time").innerText = `${data.solve_time_ms}ms`;
 
       const optList = document.getElementById("id-optimal-task-list");
@@ -256,7 +273,7 @@ Review administrative budget breakdown`;
           <div class="task-item" style="border-left: 3px solid var(--accent-cyan);">
             <div class="task-info">
               <div class="task-title"><strong>#${idx + 1}</strong> ${t.title}</div>
-              <div class="task-meta">Takes about ${t.effort} of your energy</div>
+              <div class="task-meta">Takes about ${app.formatMinutes(t.effort)}</div>
             </div>
             <button class="btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="app.toggleComplete('${t.id}')">Start Task</button>
           </div>

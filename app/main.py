@@ -155,7 +155,9 @@ def ingest_unstructured_tasks(req: RawTaskIngestRequest):
 def list_tasks():
     tasks = firestore_db.get_all_tasks()
     user_state = firestore_db.get_user_state()
-    user_energy = user_state.get("energy", 8.0)
+    # stored state holds the hours a person said they have; tasks are
+    # estimated in minutes, so convert before comparing the two.
+    user_energy = user_state.get("energy", 8.0) * 60.0
     completed_ids = {t["id"] for t in tasks if t.get("completed")}
 
     # Calculate live priority scores
@@ -172,7 +174,9 @@ def solve_optimization_schedule():
     """
     tasks = firestore_db.get_all_tasks()
     user_state = firestore_db.get_user_state()
-    user_energy = user_state.get("energy", 8.0)
+    # stored state holds the hours a person said they have; tasks are
+    # estimated in minutes, so convert before comparing the two.
+    user_energy = user_state.get("energy", 8.0) * 60.0
     completed_ids = {t["id"] for t in tasks if t.get("completed")}
 
     uncompleted_tasks = [t for t in tasks if not t.get("completed")]

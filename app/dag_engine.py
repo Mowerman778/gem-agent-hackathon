@@ -81,9 +81,21 @@ class TaskDAGEngine:
         lines = [l.strip() for l in raw_text.split("\n") if l.strip()]
         parsed_tasks = []
 
-        # Keywords for effort / energy estimation
-        heavy_keywords = ["clean", "garage", "move", "heavy", "maint", "repair", "scrub", "sanitization"]
-        light_keywords = ["email", "read", "call", "pay", "order", "check", "organize", "list"]
+        # Effort is measured in MINUTES so it can be compared against the time a
+        # person actually says they have. It used to be an abstract 1-10 score,
+        # which made "uses 5 of your 6.5 hours" meaningless.
+        MINUTE_ESTIMATES = [
+            (240, ["garage", "declutter", "renovat", "paint", "deep clean", "spring clean"]),
+            (120, ["garden", "lawn", "mow", "repair", "fix", "assemble", "sort out", "tax", "paperwork"]),
+            (60,  ["clean", "scrub", "wash the", "vacuum", "hoover", "iron", "batch cook"]),
+            (30,  ["tidy", "organise", "organize", "laundry", "shop", "groceries", "meal prep", "sort"]),
+            (15,  ["email", "call", "book", "pay", "order", "check", "reply", "list", "bin", "recycl"]),
+            (5,   ["feed", "water the", "water plants", "let the dog", "post", "text", "kettle", "vitamin"]),
+        ]
+        # How draining a task is, kept on its own 1-10 scale. Time and effort are
+        # different things: feeding the dog is quick but not nothing on a bad day.
+        heavy_keywords = ["garage", "declutter", "repair", "paint", "deep clean", "tax", "paperwork", "renovat"]
+        light_keywords = ["email", "read", "call", "pay", "order", "check", "list", "feed", "water", "text"]
 
         for idx, line in enumerate(lines):
             # Clean bullet points if any
@@ -98,7 +110,12 @@ class TaskDAGEngine:
             is_heavy = any(k in title_lower for k in heavy_keywords)
             is_light = any(k in title_lower for k in light_keywords)
 
-            effort = 8.0 if is_heavy else (3.0 if is_light else 5.0)
+            # first matching estimate wins; longest jobs are checked first
+            effort = 30.0
+            for minutes, words in MINUTE_ESTIMATES:
+                if any(w in title_lower for w in words):
+                    effort = float(minutes)
+                    break
             required_energy = 8.0 if is_heavy else (3.0 if is_light else 5.0)
             urgency_weight = 1.2 if "urgent" in title_lower or "today" in title_lower else 1.0
 
