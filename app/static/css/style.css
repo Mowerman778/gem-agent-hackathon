@@ -504,3 +504,11 @@ input[type="range"] {
   padding: 11px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; }
 
 @media (max-width: 720px) { .plan-cols { grid-template-columns: 1fr; } }
+
+/* ---------- nudge controls ---------- */
+.nudge-toggle { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
+.nudge-toggle input { width: 15px; height: 15px; accent-color: var(--accent-purple, #a855f7); cursor: pointer; }
+.nudge-rate { margin: 4px 0 14px; padding: 12px 14px; border-radius: 10px;
+  background: rgba(168,85,247,.07); border: 1px solid rgba(168,85,247,.22); transition: opacity .15s; }
+.nudge-rate input[type=range] { width: 100%; accent-color: var(--accent-purple, #a855f7); }
+.nudge-rate input[type=range]:disabled { cursor: not-allowed; }

@@ -8,9 +8,7 @@ const app = {
     this.fetchStatus();
     this.checkDiagnostic();
     this.fetchNudges();
-
-    // Periodic refresh of status & agent nudges
-    setInterval(() => this.fetchNudges(), 8000);
+    this.loadNudgePrefs();
   },
 
   usePreset: function(presetNumber) {
@@ -134,21 +132,102 @@ Review administrative budget breakdown`;
     return t ? t.title : id;
   },
 
-  updateEnergy: function(val) {
-    this.userEnergy = parseFloat(val);
-    document.getElementById("id-val-user-energy").innerText = `${this.userEnergy} / 10`;
+  ENERGY_WORDS: {
+    1: "very little energy", 2: "very little energy", 3: "pretty drained",
+    4: "a bit low",          5: "somewhere in the middle", 6: "doing okay",
+    7: "pretty good",        8: "good energy", 9: "lots of energy",
+    10: "very much energy"
+  },
 
-    // Debounce server user state update
+  userTime: 8,
+  userEnergy: 8,
+
+  updateTime: function(val) {
+    this.userTime = parseFloat(val);
+    const h = this.userTime;
+    document.getElementById("id-val-user-time").innerText =
+      h === 1 ? "1 hour" : (h < 1 ? `${h * 60} minutes` : `${h} hours`);
+    this.pushUserState();
+  },
+
+  updateEnergy: function(val) {
+    this.userEnergy = parseInt(val, 10);
+    document.getElementById("id-val-user-energy").innerText =
+      `${this.userEnergy} / 10 — ${this.ENERGY_WORDS[this.userEnergy]}`;
+    this.pushUserState();
+  },
+
+  pushUserState: function() {
     clearTimeout(this._energyTimer);
     this._energyTimer = setTimeout(async () => {
       await fetch("/api/user-state", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ energy: this.userEnergy, receptivity: 0.8 })
+        // hours available drive the planner; energy 1-10 becomes the 0-1
+        // receptivity the helper reads when deciding how hard to push
+        body: JSON.stringify({ energy: this.userTime, receptivity: this.userEnergy / 10 })
       });
       await this.fetchTasks();
       await this.runILPSolver();
     }, 300);
+  },
+
+  // ---- nudge controls --------------------------------------------------
+  nudgesEnabled: true,
+  nudgeMinutes: 1,
+  _nudgeTimer: null,
+
+  loadNudgePrefs: function() {
+    try {
+      const on = localStorage.getItem("sn.nudgesOn");
+      const mins = localStorage.getItem("sn.nudgeMins");
+      if (on !== null) this.nudgesEnabled = on === "1";
+      if (mins !== null) this.nudgeMinutes = Math.min(10, Math.max(1, parseInt(mins, 10) || 1));
+    } catch (e) { /* private browsing, keep defaults */ }
+
+    const box = document.getElementById("id-nudges-on");
+    if (box) box.checked = this.nudgesEnabled;
+    const range = document.getElementById("id-range-nudge-mins");
+    if (range) range.value = this.nudgeMinutes;
+    this.renderNudgeInterval();
+    this.applyNudgeSchedule();
+  },
+
+  saveNudgePrefs: function() {
+    try {
+      localStorage.setItem("sn.nudgesOn", this.nudgesEnabled ? "1" : "0");
+      localStorage.setItem("sn.nudgeMins", String(this.nudgeMinutes));
+    } catch (e) { /* nothing we can do, and nothing that should break the page */ }
+  },
+
+  renderNudgeInterval: function() {
+    const el = document.getElementById("id-val-nudge-mins");
+    if (el) el.innerText = this.nudgeMinutes === 1 ? "1 minute" : `${this.nudgeMinutes} minutes`;
+    const rate = document.getElementById("id-nudge-rate");
+    if (rate) rate.style.opacity = this.nudgesEnabled ? "1" : "0.45";
+    const range = document.getElementById("id-range-nudge-mins");
+    if (range) range.disabled = !this.nudgesEnabled;
+  },
+
+  applyNudgeSchedule: function() {
+    if (this._nudgeTimer) clearInterval(this._nudgeTimer);
+    this._nudgeTimer = null;
+    if (!this.nudgesEnabled) return;
+    this._nudgeTimer = setInterval(() => this.fetchNudges(), this.nudgeMinutes * 60 * 1000);
+  },
+
+  setNudgesEnabled: function(on) {
+    this.nudgesEnabled = !!on;
+    this.saveNudgePrefs();
+    this.renderNudgeInterval();
+    this.applyNudgeSchedule();
+  },
+
+  setNudgeInterval: function(mins) {
+    this.nudgeMinutes = Math.min(10, Math.max(1, parseInt(mins, 10) || 1));
+    this.saveNudgePrefs();
+    this.renderNudgeInterval();
+    this.applyNudgeSchedule();
   },
 
   runILPSolver: async function() {

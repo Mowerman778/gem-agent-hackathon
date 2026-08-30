@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=3">
+  <link rel="stylesheet" href="/static/css/style.css?v=4">
 </head>
 <body>
 
@@ -85,10 +85,18 @@
 
           <div class="slider-container">
             <div class="slider-label-row">
-              <label for="id-range-user-energy">How much time and energy do you have?</label>
-              <span id="id-val-user-energy" style="color: var(--accent-cyan); font-weight: 700;">8.0 / 10</span>
+              <label for="id-range-user-time">How much time have you got?</label>
+              <span id="id-val-user-time" style="color: var(--accent-cyan); font-weight: 700;">8 hours</span>
             </div>
-            <input type="range" id="id-range-user-energy" min="1" max="15" step="0.5" value="8.0" oninput="app.updateEnergy(this.value)">
+            <input type="range" id="id-range-user-time" min="0.5" max="12" step="0.5" value="8"
+                   oninput="app.updateTime(this.value)">
+
+            <div class="slider-label-row" style="margin-top: 18px;">
+              <label for="id-range-user-energy">How much energy have you got?</label>
+              <span id="id-val-user-energy" style="color: var(--accent-cyan); font-weight: 700;">8 / 10 — good energy</span>
+            </div>
+            <input type="range" id="id-range-user-energy" min="1" max="10" step="1" value="8"
+                   oninput="app.updateEnergy(this.value)">
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -144,6 +152,15 @@
             only speaks up when it is likely to help. If you are already stretched, it stays quiet.
           </p>
 
+          <div class="nudge-rate" id="id-nudge-rate">
+            <div class="slider-label-row">
+              <label for="id-range-nudge-mins">Check in with me every</label>
+              <span id="id-val-nudge-mins" style="color: var(--accent-purple); font-weight: 700;">1 minute</span>
+            </div>
+            <input type="range" id="id-range-nudge-mins" min="1" max="10" step="1" value="1"
+                   oninput="app.setNudgeInterval(this.value)">
+          </div>
+
           <div class="nudge-stream" id="id-agent-nudge-stream">
             <div class="nudge-card">
               <span>🌱 <em>Ready when you are. Add a few tasks and I will keep an eye on things.</em></span>
@@ -153,7 +170,10 @@
 
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 12px; color: var(--text-muted);">
             <span>Messages lately: <strong id="id-val-feedback-density" style="color: var(--accent-purple);">not many</strong></span>
-            <span>Nudges: <strong>on</strong></span>
+            <label class="nudge-toggle">
+              <input type="checkbox" id="id-nudges-on" checked onchange="app.setNudgesEnabled(this.checked)">
+              <span>Nudges on</span>
+            </label>
           </div>
         </section>
 
@@ -181,7 +201,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=3"></script>
+  <script src="/static/js/app.js?v=4"></script>
   <!-- Ask your helper: chat panel, top right -->
   <aside id="id-chat-panel" class="chat-panel" hidden aria-label="Chat with your helper">
     <div class="chat-head">
@@ -218,7 +238,7 @@
         <section class="plan-box">
           <header class="plan-head">
             <h3>Free</h3>
-            <p class="plan-price">£0<span>/month</span></p>
+            <p class="plan-price">$0<span>/month</span></p>
           </header>
           <ul class="plan-list">
             <li>Up to 25 tasks at a time</li>
@@ -234,7 +254,7 @@
           <header class="plan-head">
             <span class="plan-tag">Most popular</span>
             <h3>Pro</h3>
-            <p class="plan-price">£4.99<span>–£9.99/month</span></p>
+            <p class="plan-price">$4.99<span>–$9.99/month</span></p>
           </header>
           <ul class="plan-list">
             <li>As many tasks as you like, and you can talk them in instead of typing</li>
