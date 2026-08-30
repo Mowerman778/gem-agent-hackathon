@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=3">
 </head>
 <body>
 
@@ -20,10 +20,11 @@
         <h1 class="brand-title">SynapseNode</h1>
         <p class="brand-subtitle">Your task and priority helper</p>
       </div>
+      <button class="plan-pill" id="id-btn-plans" onclick="app.openPlans()"
+              title="See what Free and Pro include">Free/Pro</button>
     </div>
     <div style="display: flex; gap: 15px; align-items: center;">
       <span class="status-badge active" id="id-solver-speed-badge">⚡ Ready</span>
-      <button class="btn-secondary" id="id-btn-plans" onclick="app.openPlans()">✨ Subscription</button>
       <button class="btn-primary" id="id-btn-chat" onclick="app.toggleChat()">💬 Ask your helper</button>
     </div>
   </header>
@@ -180,7 +181,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=3"></script>
   <!-- Ask your helper: chat panel, top right -->
   <aside id="id-chat-panel" class="chat-panel" hidden aria-label="Chat with your helper">
     <div class="chat-head">
@@ -207,41 +208,47 @@
   </aside>
 
   <!-- Subscription -->
-  <div id="id-plans-overlay" class="modal-overlay" hidden onclick="app.closePlansFromOverlay(event)">
+  <div id="id-plans-overlay" class="modal-overlay" onclick="app.closePlansFromOverlay(event)">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="id-plans-title">
       <button class="modal-x" onclick="app.closePlans()" aria-label="Close">&times;</button>
       <h2 id="id-plans-title" class="modal-title">Choose your plan</h2>
       <p class="modal-sub">Free covers the essentials. Pro is for when you want it to know you.</p>
-      <div class="plan-grid">
-        <div class="plan-col head"></div>
-        <div class="plan-col head">Free</div>
-        <div class="plan-col head pro">Pro · $4.99–$9.99/mo</div>
 
-        <div class="plan-col lbl">Your task list</div>
-        <div class="plan-col">Up to 25 tasks at a time</div>
-        <div class="plan-col pro">As many as you like, and you can talk them in instead of typing</div>
+      <div class="plan-cols">
+        <section class="plan-box">
+          <header class="plan-head">
+            <h3>Free</h3>
+            <p class="plan-price">£0<span>/month</span></p>
+          </header>
+          <ul class="plan-list">
+            <li>Up to 25 tasks at a time</li>
+            <li>Sorts by priority and the energy you have</li>
+            <li>A daily summary and simple nudges</li>
+            <li>Syncs across your devices</li>
+            <li>Just you</li>
+          </ul>
+          <button class="btn-secondary plan-cta" onclick="app.closePlans()">Stay on Free</button>
+        </section>
 
-        <div class="plan-col lbl">Working out your day</div>
-        <div class="plan-col">Sorts by priority and energy</div>
-        <div class="plan-col pro">Also weighs deadlines, how long things have been waiting, and what you tend to put off</div>
-
-        <div class="plan-col lbl">Your helper</div>
-        <div class="plan-col">A daily summary and simple nudges</div>
-        <div class="plan-col pro">Learns your rhythms and what actually helps you, and speaks up on its own</div>
-
-        <div class="plan-col lbl">Saving and syncing</div>
-        <div class="plan-col">Syncs across your devices</div>
-        <div class="plan-col pro">Automatic backups, plus how your weeks change over time</div>
-
-        <div class="plan-col lbl">Sharing</div>
-        <div class="plan-col">Just you</div>
-        <div class="plan-col pro">Household mode — share and split tasks with the people you live with</div>
+        <section class="plan-box pro">
+          <header class="plan-head">
+            <span class="plan-tag">Most popular</span>
+            <h3>Pro</h3>
+            <p class="plan-price">£4.99<span>–£9.99/month</span></p>
+          </header>
+          <ul class="plan-list">
+            <li>As many tasks as you like, and you can talk them in instead of typing</li>
+            <li>Also weighs deadlines, how long things have waited, and what you tend to put off</li>
+            <li>Learns your rhythms and what actually helps you, and speaks up on its own</li>
+            <li>Automatic backups, plus how your weeks change over time</li>
+            <li>Household mode — share and split tasks with the people you live with</li>
+          </ul>
+          <a class="btn-primary plan-cta" id="id-btn-buy-pro" href="/subscribe/pro"
+             onclick="return app.startCheckout(event)">Get Pro</a>
+        </section>
       </div>
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="app.closePlans()">Stay on Free</button>
-        <button class="btn-primary" onclick="app.closePlans()">Try Pro</button>
-      </div>
-      <p class="modal-foot">Click anywhere outside this box, or press Esc, to close.</p>
+
+      <p class="modal-foot">Cancel any time. Click outside this box, press Esc, or use the cross to close.</p>
     </div>
   </div>
 

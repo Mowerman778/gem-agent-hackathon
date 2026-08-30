@@ -338,9 +338,26 @@ Review administrative budget breakdown`;
   },
 
   // ---- Subscription ----------------------------------------------------
-  openPlans: function() { document.getElementById('id-plans-overlay').hidden = false; },
-  closePlans: function() { document.getElementById('id-plans-overlay').hidden = true; },
-  closePlansFromOverlay: function(e) { if (e.target.id === 'id-plans-overlay') this.closePlans(); }
+  openPlans: function() { document.getElementById('id-plans-overlay').classList.add('is-open'); },
+  closePlans: function() { document.getElementById('id-plans-overlay').classList.remove('is-open'); },
+
+  // Only a click on the backdrop itself closes; clicks inside the box bubble
+  // up to the same handler, so the target check is what keeps it open.
+  closePlansFromOverlay: function(e) { if (e.target.id === 'id-plans-overlay') this.closePlans(); },
+
+  startCheckout: function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    // Point PRO_CHECKOUT_URL at your payment provider when billing is live.
+    const url = this.PRO_CHECKOUT_URL;
+    if (url) { window.open(url, '_blank', 'noopener'); return false; }
+    this.closePlans();
+    if (!this.chatOpen) this.toggleChat();
+    this.addChatMsg('Pro is not open for sign-ups just yet. Tell me what you would want it to '
+      + 'remember about you, and I will make sure it is on the list.', 'bot');
+    return false;
+  },
+
+  PRO_CHECKOUT_URL: null
 };
 
 document.addEventListener('keydown', function(e) {
