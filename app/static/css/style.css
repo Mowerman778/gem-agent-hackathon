@@ -531,3 +531,12 @@ input[type="range"] {
 .signin-add input { flex: 1; padding: 11px 13px; border-radius: 10px; font: inherit; font-size: 14px;
   background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); color: inherit; }
 .signin-add input:focus { outline: 2px solid var(--accent-cyan, #06b6d4); outline-offset: 1px; }
+
+/* ---------- judges' unlock ---------- */
+.judges-cta { margin-top: 10px; cursor: pointer; font-size: 13px;
+  color: var(--accent-emerald, #10b981); background: rgba(16,185,129,.12);
+  border: 1px dashed rgba(16,185,129,.55); }
+.judges-cta:hover { background: rgba(16,185,129,.22); color: #fff; }
+.judges-cta.on { border-style: solid; background: rgba(16,185,129,.3); color: #fff; }
+.judges-note { margin: 10px 0 0; font-size: 11.5px; text-align: center;
+  color: var(--text-muted, #8b9aa7); }

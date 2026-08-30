@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=6">
+  <link rel="stylesheet" href="/static/css/style.css?v=7">
 </head>
 <body>
 
@@ -204,7 +204,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=6"></script>
+  <script src="/static/js/app.js?v=7"></script>
   <!-- Ask your helper: chat panel, top right -->
   <aside id="id-chat-panel" class="chat-panel" hidden aria-label="Chat with your helper">
     <div class="chat-head">
@@ -245,6 +245,7 @@
           </header>
           <ul class="plan-list">
             <li>Up to 25 tasks at a time</li>
+            <li>Your helper starts fresh each conversation</li>
             <li>Sorts by priority and the energy you have</li>
             <li>A daily summary and simple nudges</li>
             <li>Syncs across your devices</li>
@@ -260,14 +261,18 @@
             <p class="plan-price">$4.99<span>–$9.99/month</span></p>
           </header>
           <ul class="plan-list">
-            <li>As many tasks as you like, and you can talk them in instead of typing</li>
-            <li>Also weighs deadlines, how long things have waited, and what you tend to put off</li>
-            <li>Learns your rhythms and what actually helps you, and speaks up on its own</li>
-            <li>Automatic backups, plus how your weeks change over time</li>
-            <li>Household mode — share and split tasks with the people you live with</li>
+            <li>As many tasks as you like — no limit on your list</li>
+            <li>Your helper remembers you between conversations: when you have energy, what you dread, what actually helps</li>
+            <li>Knows who else is in the household and can suggest handing a job over</li>
+            <li>Household mode — pass a task to someone you live with</li>
+            <li>Nudges that draw on what it has learned about you</li>
           </ul>
           <a class="btn-primary plan-cta" id="id-btn-buy-pro" href="/subscribe/pro"
              onclick="return app.startCheckout(event)">Get Pro</a>
+          <button class="plan-cta judges-cta" id="id-btn-judges" onclick="app.unlockPro()">
+            🏆 Judges: unlock Pro free
+          </button>
+          <p class="judges-note" id="id-plan-state">Currently on Free.</p>
         </section>
       </div>
 

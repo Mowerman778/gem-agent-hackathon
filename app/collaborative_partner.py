@@ -66,7 +66,13 @@ How you speak - this matters as much as what you decide:
   are an AI model. Just help.
 
 Before suggesting anything specific, quietly call your tools to see the real
-task list and how the person is doing. Never invent a task or a number."""
+task list and how the person is doing. Never invent a task or a number.
+
+When someone tells you something lasting about themselves - when they have
+energy, what they dread, what actually helps, who they live with - quietly save
+it with remember_about_user so you still know it next time. One short sentence,
+and never announce that you are saving it. Do not save passing moods or single
+tasks."""
 
 
 class CollaborativePartner:
@@ -153,6 +159,47 @@ class CollaborativePartner:
                 pass
         return signals
 
+    def remember_about_user(self, note: str) -> str:
+        """Saves one lasting thing you have learned about this person.
+
+        Use it when they tell you something worth carrying into later
+        conversations - when they have energy, what they dread, what actually
+        helps them, who they live with. Keep each note to one short sentence.
+        Do not save passing details like today's mood or a single task.
+
+        Args:
+            note: One short sentence, written about the person.
+
+        Returns:
+            Confirmation, or a note that remembering is a Pro feature.
+        """
+        if not self.db:
+            return "No store available."
+        prefs = self.db.get_preferences(self._profile)
+        if not prefs.get("pro"):
+            return "Remembering across conversations is a Pro feature; not saved."
+        notes = prefs.setdefault("notes", [])
+        clean = (note or "").strip()
+        if clean and clean not in notes:
+            notes.append(clean)
+            prefs["notes"] = notes[-25:]
+            self.db.save_preferences(prefs, self._profile)
+        return "Saved."
+
+    def _remembered(self) -> List[str]:
+        if not self.db:
+            return []
+        prefs = self.db.get_preferences(self._profile)
+        return prefs.get("notes", []) if prefs.get("pro") else []
+
+    def _household(self) -> List[str]:
+        if not self.db:
+            return []
+        try:
+            return [p for p in self.db.list_profiles() if p != self._profile]
+        except Exception:
+            return []
+
     # ---- conversation ----------------------------------------------------
 
     @staticmethod
@@ -169,14 +216,26 @@ class CollaborativePartner:
         return False
 
     def _new_chat(self):
+        # Everything the helper has been told to remember rides along in the
+        # system instruction, so it opens each conversation already knowing them.
+        extra = ""
+        notes = self._remembered()
+        if notes:
+            extra += ("\n\nWhat you already know about this person. Use it naturally, "
+                      "never recite it back as a list:\n- " + "\n- ".join(notes))
+        others = self._household()
+        if others:
+            extra += ("\n\nOthers in this household you can suggest handing a task to: "
+                      + ", ".join(others) + ".")
         return self.client.chats.create(
             model=self.model,
             config={
-                "system_instruction": SYSTEM_INSTRUCTION,
+                "system_instruction": SYSTEM_INSTRUCTION + extra,
                 "max_output_tokens": MAX_OUTPUT_TOKENS,
                 "temperature": 0.7,
                 "thinking_config": {"thinking_budget": THINKING_BUDGET},
-                "tools": [self.list_open_tasks, self.get_wellbeing_signals],
+                "tools": [self.list_open_tasks, self.get_wellbeing_signals,
+                          self.remember_about_user],
             },
         )
 
@@ -230,6 +289,13 @@ class CollaborativePartner:
             "reply": reply,
             "model": self.model,
         }
+
+    def reset_profile(self, profile: str) -> int:
+        """Drops every conversation for one person, so a plan change takes effect."""
+        keys = [k for k in self._sessions if k.startswith(f"{profile}::")]
+        for k in keys:
+            self._sessions.pop(k, None)
+        return len(keys)
 
     def reset(self, session_id: str = "default", profile: str = "default") -> bool:
         """Drops a conversation so the next turn starts fresh."""

@@ -67,6 +67,7 @@ const app = {
   },
 
   refreshAll: async function() {
+    this.refreshPlan();
     await this.fetchTasks();
     this.fetchStatus();
     this.checkDiagnostic();
@@ -513,7 +514,49 @@ Review administrative budget breakdown`;
   },
 
   // ---- Subscription ----------------------------------------------------
-  openPlans: function() { document.getElementById('id-plans-overlay').classList.add('is-open'); },
+  isPro: false,
+
+  refreshPlan: async function() {
+    try {
+      const r = await this.api('/api/plan');
+      const d = await r.json();
+      this.isPro = !!d.pro;
+      const note = document.getElementById('id-plan-state');
+      const btn = document.getElementById('id-btn-judges');
+      if (note) {
+        note.innerText = this.isPro
+          ? `Pro is unlocked${d.remembered && d.remembered.length ? ` · remembers ${d.remembered.length} thing${d.remembered.length === 1 ? '' : 's'} about you` : ''}.`
+          : 'Currently on Free.';
+      }
+      if (btn) {
+        btn.innerText = this.isPro ? '✓ Pro unlocked — click to turn off' : '🏆 Judges: unlock Pro free';
+        btn.classList.toggle('on', this.isPro);
+      }
+    } catch (e) { /* plan display is not worth breaking the page over */ }
+  },
+
+  // Open on purpose: judges need to exercise the whole product without paying.
+  unlockPro: async function() {
+    const turningOn = !this.isPro;
+    await this.api('/api/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pro: turningOn })
+    });
+    await this.refreshPlan();
+    await this.refreshAll();
+    if (turningOn) {
+      this.closePlans();
+      if (!this.chatOpen) this.toggleChat();
+      this.addChatMsg('Pro is on for this profile. Tell me something about yourself — when you '
+        + 'have energy, what you dread — and I will still know it next time we talk.', 'bot');
+    }
+  },
+
+  openPlans: function() {
+    this.refreshPlan();
+    document.getElementById('id-plans-overlay').classList.add('is-open');
+  },
   closePlans: function() { document.getElementById('id-plans-overlay').classList.remove('is-open'); },
 
   // Only a click on the backdrop itself closes; clicks inside the box bubble

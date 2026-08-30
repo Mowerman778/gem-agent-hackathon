@@ -72,6 +72,21 @@ class DiagnosticAnswerRequest(BaseModel):
 class ProfileCreateRequest(BaseModel):
     name: str
 
+class PlanChangeRequest(BaseModel):
+    pro: bool = True
+
+class AssignTaskRequest(BaseModel):
+    task_id: str
+    to_profile: str
+
+# Free keeps a modest queue; Pro lifts it. Enforced server side so the limit
+# is real rather than a label on a pricing table.
+FREE_TASK_LIMIT = 25
+
+
+def is_pro(profile: str) -> bool:
+    return bool(firestore_db.get_preferences(profile).get("pro"))
+
 class PartnerChatRequest(BaseModel):
     message: str
     session_id: str = "default"
@@ -139,6 +154,16 @@ def ingest_unstructured_tasks(req: RawTaskIngestRequest, profile: str = Header(d
     """
     parsed_tasks = TaskDAGEngine.parse_unstructured_input(req.raw_text)
     resolved_tasks, resolutions = TaskDAGEngine.resolve_cycles_and_build_dag(parsed_tasks)
+
+    if not is_pro(profile):
+        existing = len([t for t in firestore_db.get_all_tasks(profile) if not t.get("completed")])
+        room = FREE_TASK_LIMIT - existing
+        if room <= 0:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Free keeps up to {FREE_TASK_LIMIT} tasks at a time. Finish a few, "
+                       "or switch to Pro for as many as you like.")
+        resolved_tasks = resolved_tasks[:room]
 
     for t in resolved_tasks:
         firestore_db.save_task(t, profile)
@@ -298,6 +323,54 @@ def create_profile(req: ProfileCreateRequest):
         raise HTTPException(status_code=400, detail="Please enter a name.")
     profile = firestore_db.create_profile(name)
     return {"profile": profile, "display_name": name}
+
+
+@app.get("/api/plan")
+def get_plan(profile: str = Header(default="default", alias="X-Profile")):
+    """Which plan this person is on, and what the helper remembers about them."""
+    prefs = firestore_db.get_preferences(profile)
+    return {
+        "pro": bool(prefs.get("pro")),
+        "free_task_limit": FREE_TASK_LIMIT,
+        "remembered": prefs.get("notes", []),
+    }
+
+
+@app.post("/api/plan")
+def set_plan(req: PlanChangeRequest, profile: str = Header(default="default", alias="X-Profile")):
+    """
+    Switches this profile between Free and Pro.
+
+    Open deliberately: competition judges need to exercise the whole product
+    without a payment step. Put this behind real billing before charging anyone.
+    """
+    prefs = firestore_db.get_preferences(profile)
+    prefs["pro"] = bool(req.pro)
+    firestore_db.save_preferences(prefs, profile)
+    # the plan changes what rides in the helper's context, so start fresh
+    collaborative_partner.reset_profile(profile)
+    return {"pro": prefs["pro"], "profile": profile}
+
+
+@app.post("/api/household/assign")
+def assign_task(req: AssignTaskRequest, profile: str = Header(default="default", alias="X-Profile")):
+    """Pro: hand one of your tasks to someone else in the household."""
+    if not is_pro(profile):
+        raise HTTPException(status_code=402, detail="Sharing tasks is a Pro feature.")
+
+    task = next((t for t in firestore_db.get_all_tasks(profile) if t["id"] == req.task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="That task is not on your list.")
+    if req.to_profile not in firestore_db.list_profiles():
+        raise HTTPException(status_code=404, detail="Nobody here by that name.")
+
+    moved = dict(task)
+    moved["handed_over_by"] = profile
+    firestore_db.save_task(moved, req.to_profile)
+    firestore_db.update_task_status(req.task_id, True, profile)
+    pubsub_bus.publish_event("task_handed_over",
+                             {"title": task.get("title"), "from": profile, "to": req.to_profile})
+    return {"assigned": task.get("title"), "to": req.to_profile}
 
 
 if __name__ == "__main__":
