@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from typing import Dict, Any, List, Optional
 
@@ -91,7 +92,7 @@ class CollaborativePartner:
 
     # ---- tools exposed to the model -------------------------------------
 
-    def _tool_list_open_tasks(self) -> List[Dict[str, Any]]:
+    def list_open_tasks(self) -> List[Dict[str, Any]]:
         """Lists the tasks the user has not yet completed.
 
         Returns:
@@ -111,7 +112,7 @@ class CollaborativePartner:
             })
         return out[:25]
 
-    def _tool_get_wellbeing_signals(self) -> Dict[str, Any]:
+    def get_wellbeing_signals(self) -> Dict[str, Any]:
         """Reads how depleted or receptive the user currently is.
 
         Returns:
@@ -120,7 +121,7 @@ class CollaborativePartner:
             and the queue's entropy score if available.
         """
         state = self.db.get_user_state() if self.db else {}
-        open_tasks = self._tool_list_open_tasks()
+        open_tasks = self.list_open_tasks()
         signals = {
             "receptivity": state.get("receptivity", 0.8),
             "energy_capacity_hours": state.get("energy", state.get("energy_capacity", 6.0)),
@@ -136,6 +137,19 @@ class CollaborativePartner:
 
     # ---- conversation ----------------------------------------------------
 
+    @staticmethod
+    def _looks_like_leaked_internals(text: str) -> bool:
+        """
+        True when the model has narrated a tool name instead of answering.
+        A real reply is prose; this catches a bare identifier, quoted or not.
+        """
+        stripped = (text or "").strip().strip("\'\"`").strip()
+        if not stripped:
+            return True
+        if len(stripped) < 40 and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", stripped):
+            return True
+        return False
+
     def _new_chat(self):
         return self.client.chats.create(
             model=self.model,
@@ -144,7 +158,7 @@ class CollaborativePartner:
                 "max_output_tokens": MAX_OUTPUT_TOKENS,
                 "temperature": 0.7,
                 "thinking_config": {"thinking_budget": THINKING_BUDGET},
-                "tools": [self._tool_list_open_tasks, self._tool_get_wellbeing_signals],
+                "tools": [self.list_open_tasks, self.get_wellbeing_signals],
             },
         )
 
@@ -167,16 +181,30 @@ class CollaborativePartner:
             chat = self._new_chat()
             self._sessions[session_id] = chat
 
-        try:
-            response = chat.send_message(message)
-        except Exception as e:
-            logger.warning(f"Partner turn failed: {e}")
-            return {"available": True, "reply": None, "error": str(e)[:300]}
+        reply = None
+        for attempt in (1, 2):
+            try:
+                response = chat.send_message(message)
+            except Exception as e:
+                logger.warning(f"Partner turn failed: {e}")
+                return {"available": True, "reply": None, "error": str(e)[:300]}
+
+            candidate = (response.text or "").strip()
+            if not self._looks_like_leaked_internals(candidate):
+                reply = candidate
+                break
+            logger.warning(
+                f"Attempt {attempt}: model returned internals instead of a reply "
+                f"({candidate!r}); retrying." )
+
+        if reply is None:
+            # Never show a tool name to a person. Say something human instead.
+            reply = ("Sorry, I lost my thread there. Could you say that again?")
 
         return {
             "available": True,
             "session_id": session_id,
-            "reply": (response.text or "").strip(),
+            "reply": reply,
             "model": self.model,
         }
 
