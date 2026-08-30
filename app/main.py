@@ -2,7 +2,7 @@ import os
 import sys
 import time
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
@@ -69,6 +69,9 @@ class DiagnosticAnswerRequest(BaseModel):
     question_id: str
     value: Any
 
+class ProfileCreateRequest(BaseModel):
+    name: str
+
 class PartnerChatRequest(BaseModel):
     message: str
     session_id: str = "default"
@@ -89,9 +92,9 @@ def index_page():
     return "<h1>SynapseNode API Running on Cloud Run container engine</h1>"
 
 @app.get("/api/status")
-def get_system_status():
-    user_state = firestore_db.get_user_state()
-    tasks = firestore_db.get_all_tasks()
+def get_system_status(profile: str = Header(default="default", alias="X-Profile")):
+    user_state = firestore_db.get_user_state(profile)
+    tasks = firestore_db.get_all_tasks(profile)
     queue_entropy = evaluate_task_queue_entropy(tasks)
 
     return {
@@ -129,7 +132,7 @@ def get_system_status():
     }
 
 @app.post("/api/ingest")
-def ingest_unstructured_tasks(req: RawTaskIngestRequest):
+def ingest_unstructured_tasks(req: RawTaskIngestRequest, profile: str = Header(default="default", alias="X-Profile")):
     """
     Ingests unstructured natural language text, synthesizes topological DAG,
     detects/resolves cyclic deadlocks, and saves tasks into Firestore.
@@ -138,7 +141,7 @@ def ingest_unstructured_tasks(req: RawTaskIngestRequest):
     resolved_tasks, resolutions = TaskDAGEngine.resolve_cycles_and_build_dag(parsed_tasks)
 
     for t in resolved_tasks:
-        firestore_db.save_task(t)
+        firestore_db.save_task(t, profile)
 
     # Publish Pub/Sub event for task queue update
     msg_id = pubsub_bus.publish_event("tasks_ingested", {"task_count": len(resolved_tasks)})
@@ -152,9 +155,9 @@ def ingest_unstructured_tasks(req: RawTaskIngestRequest):
     }
 
 @app.get("/api/tasks")
-def list_tasks():
-    tasks = firestore_db.get_all_tasks()
-    user_state = firestore_db.get_user_state()
+def list_tasks(profile: str = Header(default="default", alias="X-Profile")):
+    tasks = firestore_db.get_all_tasks(profile)
+    user_state = firestore_db.get_user_state(profile)
     # stored state holds the hours a person said they have; tasks are
     # estimated in minutes, so convert before comparing the two.
     user_energy = user_state.get("energy", 8.0) * 60.0
@@ -167,13 +170,13 @@ def list_tasks():
     return {"tasks": tasks}
 
 @app.post("/api/solve")
-def solve_optimization_schedule():
+def solve_optimization_schedule(profile: str = Header(default="default", alias="X-Profile")):
     """
     Executes 0-1 Integer Linear Program (ILP) solver on current task queue
     given user's current energy capacity envelope.
     """
-    tasks = firestore_db.get_all_tasks()
-    user_state = firestore_db.get_user_state()
+    tasks = firestore_db.get_all_tasks(profile)
+    user_state = firestore_db.get_user_state(profile)
     # stored state holds the hours a person said they have; tasks are
     # estimated in minutes, so convert before comparing the two.
     user_energy = user_state.get("energy", 8.0) * 60.0
@@ -191,15 +194,15 @@ def solve_optimization_schedule():
     return result
 
 @app.post("/api/complete-task")
-def complete_task(req: TaskCompleteRequest):
-    tasks = firestore_db.get_all_tasks()
+def complete_task(req: TaskCompleteRequest, profile: str = Header(default="default", alias="X-Profile")):
+    tasks = firestore_db.get_all_tasks(profile)
     task_map = {t["id"]: t for t in tasks}
     
     if req.task_id not in task_map:
         raise HTTPException(status_code=404, detail="Task not found")
 
     task = task_map[req.task_id]
-    firestore_db.update_task_status(req.task_id, True)
+    firestore_db.update_task_status(req.task_id, True, profile)
 
     # Publish Pub/Sub event to trigger agent nudge worker asynchronously
     msg_id = pubsub_bus.publish_event("task_completed", {
@@ -215,14 +218,14 @@ def complete_task(req: TaskCompleteRequest):
     }
 
 @app.post("/api/user-state")
-def update_user_state(req: UserStateUpdateRequest):
+def update_user_state(req: UserStateUpdateRequest, profile: str = Header(default="default", alias="X-Profile")):
     state = {"energy": req.energy, "receptivity": req.receptivity}
-    firestore_db.save_user_state(state)
+    firestore_db.save_user_state(state, profile)
     return {"status": "success", "user_state": state}
 
 @app.get("/api/diagnostic")
-def get_diagnostic_question():
-    tasks = firestore_db.get_all_tasks()
+def get_diagnostic_question(profile: str = Header(default="default", alias="X-Profile")):
+    tasks = firestore_db.get_all_tasks(profile)
     uncompleted = [t for t in tasks if not t.get("completed")]
     question, current_entropy = AdaptiveEntropyDiagnostic.get_next_diagnostic_question(uncompleted, session_answered_questions)
 
@@ -233,41 +236,40 @@ def get_diagnostic_question():
     }
 
 @app.post("/api/diagnostic/answer")
-def submit_diagnostic_answer(req: DiagnosticAnswerRequest):
+def submit_diagnostic_answer(req: DiagnosticAnswerRequest, profile: str = Header(default="default", alias="X-Profile")):
     global session_answered_questions
     session_answered_questions.append(req.question_id)
 
     if req.question_id == "q_user_energy":
-        user_state = firestore_db.get_user_state()
+        user_state = firestore_db.get_user_state(profile)
         user_state["energy"] = float(req.value)
-        firestore_db.save_user_state(user_state)
+        firestore_db.save_user_state(user_state, profile)
 
     return {"status": "success", "answered": req.question_id}
 
 @app.get("/api/nudges")
-def get_agent_nudges():
+def get_agent_nudges(profile: str = Header(default="default", alias="X-Profile")):
     # Generate proactive prompt if empty
-    user_state = firestore_db.get_user_state()
+    user_state = firestore_db.get_user_state(profile)
     nudge = agent_companion.generate_behavioral_nudge(
         task_name="Domestic Priority Task",
         user_receptivity=user_state.get("receptivity", 0.8),
         action_type="nudge"
     )
     if nudge.get("delivered"):
-        firestore_db.log_agent_nudge(nudge)
+        firestore_db.log_agent_nudge(nudge, profile)
 
-    store = firestore_db._read_local_store()
-    return {"nudges": store.get("agent_history", [])[-10:]}
+    return {"nudges": firestore_db.get_agent_history(profile)}
 
 
 @app.post("/api/partner/chat")
-def partner_chat(req: PartnerChatRequest):
+def partner_chat(req: PartnerChatRequest, profile: str = Header(default="default", alias="X-Profile")):
     """
     One turn with the Collaborative Partner. It reads the live task queue and
     wellbeing signals through its own tools before it answers, and may well
     suggest doing less.
     """
-    result = collaborative_partner.converse(req.message, session_id=req.session_id)
+    result = collaborative_partner.converse(req.message, session_id=req.session_id, profile=profile)
     if result.get("available") is False:
         raise HTTPException(status_code=503, detail=result.get("reason"))
     if result.get("error"):
@@ -276,9 +278,26 @@ def partner_chat(req: PartnerChatRequest):
 
 
 @app.post("/api/partner/reset")
-def partner_reset(session_id: str = "default"):
+def partner_reset(session_id: str = "default",
+                  profile: str = Header(default="default", alias="X-Profile")):
     """Starts the conversation over."""
-    return {"reset": collaborative_partner.reset(session_id), "session_id": session_id}
+    return {"reset": collaborative_partner.reset(session_id, profile), "session_id": session_id}
+
+
+@app.get("/api/profiles")
+def list_profiles():
+    """Who is set up on this device."""
+    return {"profiles": firestore_db.list_profiles()}
+
+
+@app.post("/api/profiles")
+def create_profile(req: ProfileCreateRequest):
+    """Adds someone. Names are slugged, so 'Sam B' becomes 'sam-b'."""
+    name = (req.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Please enter a name.")
+    profile = firestore_db.create_profile(name)
+    return {"profile": profile, "display_name": name}
 
 
 if __name__ == "__main__":

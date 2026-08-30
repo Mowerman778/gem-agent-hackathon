@@ -1,14 +1,93 @@
 const app = {
+
+  // ---- who is using this device ---------------------------------------
+  profile: null,
+
+  // Every API call carries the signed-in profile, so two people sharing a
+  // computer never see each other's tasks, settings or conversation.
+  api: function(path, options) {
+    const opts = Object.assign({}, options || {});
+    opts.headers = Object.assign({}, opts.headers || {}, { "X-Profile": this.profile || "default" });
+    return fetch(path, opts);
+  },
+
+  loadProfile: function() {
+    try { this.profile = localStorage.getItem("sn.profile"); } catch (e) { this.profile = null; }
+    return this.profile;
+  },
+
+  setProfile: function(name) {
+    this.profile = name;
+    try { localStorage.setItem("sn.profile", name); } catch (e) { /* private mode */ }
+    const el = document.getElementById("id-current-profile");
+    if (el) el.innerText = name;
+  },
+
+  showSignIn: function() { document.getElementById("id-signin-overlay").classList.add("is-open"); },
+  hideSignIn: function() { document.getElementById("id-signin-overlay").classList.remove("is-open"); },
+
+  renderProfileList: async function() {
+    const box = document.getElementById("id-profile-list");
+    if (!box) return;
+    let names = [];
+    try {
+      const r = await fetch("/api/profiles");
+      names = (await r.json()).profiles || [];
+    } catch (e) { /* offline: they can still create one */ }
+    box.innerHTML = names.length
+      ? names.map(n => `<button class="profile-chip" onclick="app.chooseProfile('${n}')">${n}</button>`).join("")
+      : '<p class="signin-empty">No one set up yet. Add your name below.</p>';
+  },
+
+  chooseProfile: async function(name) {
+    this.setProfile(name);
+    this.hideSignIn();
+    await this.refreshAll();
+  },
+
+  addProfile: async function(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const input = document.getElementById("id-new-profile");
+    const name = input.value.trim();
+    if (!name) return;
+    const r = await fetch("/api/profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name })
+    });
+    if (!r.ok) { alert("Could not add that name."); return; }
+    const data = await r.json();
+    input.value = "";
+    await this.chooseProfile(data.profile);
+  },
+
+  switchProfile: async function() {
+    await this.renderProfileList();
+    this.showSignIn();
+  },
+
+  refreshAll: async function() {
+    await this.fetchTasks();
+    this.fetchStatus();
+    this.checkDiagnostic();
+    this.fetchNudges();
+  },
+
   tasks: [],
   userEnergy: 8.0,
   currentDiagnosticQuestion: null,
 
-  init: function() {
-    this.fetchTasks();
-    this.fetchStatus();
-    this.checkDiagnostic();
-    this.fetchNudges();
+  init: async function() {
     this.loadNudgePrefs();
+    const who = this.loadProfile();
+    if (!who) {
+      // nobody chosen on this device yet - ask before loading anyone's data
+      await this.renderProfileList();
+      this.showSignIn();
+      return;
+    }
+    this.setProfile(who);
+    await this.refreshAll();
   },
 
   usePreset: function(presetNumber) {
@@ -35,7 +114,7 @@ Review administrative budget breakdown`;
     }
 
     try {
-      const res = await fetch("/api/ingest", {
+      const res = await this.api("/api/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raw_text: rawText })
@@ -65,7 +144,7 @@ Review administrative budget breakdown`;
 
   fetchTasks: async function() {
     try {
-      const res = await fetch("/api/tasks");
+      const res = await this.api("/api/tasks");
       const data = await res.json();
       this.tasks = data.tasks || [];
       this.renderTaskList();
@@ -175,7 +254,7 @@ Review administrative budget breakdown`;
   pushUserState: function() {
     clearTimeout(this._energyTimer);
     this._energyTimer = setTimeout(async () => {
-      await fetch("/api/user-state", {
+      await this.api("/api/user-state", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // hours available drive the planner; energy 1-10 becomes the 0-1
@@ -247,7 +326,7 @@ Review administrative budget breakdown`;
 
   runILPSolver: async function() {
     try {
-      const res = await fetch("/api/solve", { method: "POST" });
+      const res = await this.api("/api/solve", { method: "POST" });
       const data = await res.json();
 
       const solveTimePill = document.getElementById("id-cloud-run-solve-time");
@@ -286,7 +365,7 @@ Review administrative budget breakdown`;
 
   toggleComplete: async function(taskId) {
     try {
-      await fetch("/api/complete-task", {
+      await this.api("/api/complete-task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task_id: taskId })
@@ -301,7 +380,7 @@ Review administrative budget breakdown`;
 
   fetchStatus: async function() {
     try {
-      const res = await fetch("/api/status");
+      const res = await this.api("/api/status");
       const data = await res.json();
 
       const fsMode = document.getElementById("id-firestore-mode");
@@ -315,7 +394,7 @@ Review administrative budget breakdown`;
 
   checkDiagnostic: async function() {
     try {
-      const res = await fetch("/api/diagnostic");
+      const res = await this.api("/api/diagnostic");
       const data = await res.json();
 
       const modal = document.getElementById("id-diagnostic-modal");
@@ -341,7 +420,7 @@ Review administrative budget breakdown`;
 
   answerDiagnostic: async function(questionId, value) {
     try {
-      await fetch("/api/diagnostic/answer", {
+      await this.api("/api/diagnostic/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: questionId, value: value })
@@ -356,7 +435,7 @@ Review administrative budget breakdown`;
 
   fetchNudges: async function() {
     try {
-      const res = await fetch("/api/nudges");
+      const res = await this.api("/api/nudges");
       const data = await res.json();
 
       const nudges = data.nudges || [];
@@ -415,7 +494,7 @@ Review administrative budget breakdown`;
     this.addChatMsg(text, 'me');
     const pending = this.addChatMsg('thinking…', 'bot', 'thinking');
     try {
-      const res = await fetch('/api/partner/chat', {
+      const res = await this.api('/api/partner/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, session_id: this.chatSession })

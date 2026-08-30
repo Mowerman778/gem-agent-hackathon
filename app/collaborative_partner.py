@@ -89,6 +89,8 @@ class CollaborativePartner:
         self.client = None
         self.using_gemini = False
         self._sessions: Dict[str, Any] = {}
+        # set per turn so the tools read the right person's data
+        self._profile = 'default'
         self._init_model_client()
 
     def _init_model_client(self):
@@ -118,7 +120,7 @@ class CollaborativePartner:
         if not self.db:
             return []
         out = []
-        for t in self.db.get_all_tasks():
+        for t in self.db.get_all_tasks(self._profile):
             if t.get("completed"):
                 continue
             out.append({
@@ -136,7 +138,7 @@ class CollaborativePartner:
             capacity in hours they have left today, how many tasks are waiting,
             and the queue's entropy score if available.
         """
-        state = self.db.get_user_state() if self.db else {}
+        state = self.db.get_user_state(self._profile) if self.db else {}
         open_tasks = self.list_open_tasks()
         signals = {
             "receptivity": state.get("receptivity", 0.8),
@@ -178,7 +180,8 @@ class CollaborativePartner:
             },
         )
 
-    def converse(self, message: str, session_id: str = "default") -> Dict[str, Any]:
+    def converse(self, message: str, session_id: str = "default",
+                 profile: str = "default") -> Dict[str, Any]:
         """
         Sends one turn to the Partner. Conversation state is held per session_id,
         so follow-up turns keep their context.
@@ -192,10 +195,14 @@ class CollaborativePartner:
                 "reply": None,
             }
 
-        chat = self._sessions.get(session_id)
+        # Conversations are per person, so one profile never sees another's
+        # history even if the browser reuses a session id.
+        self._profile = profile
+        key = f"{profile}::{session_id}"
+        chat = self._sessions.get(key)
         if chat is None:
             chat = self._new_chat()
-            self._sessions[session_id] = chat
+            self._sessions[key] = chat
 
         reply = None
         for attempt in (1, 2):
@@ -224,6 +231,6 @@ class CollaborativePartner:
             "model": self.model,
         }
 
-    def reset(self, session_id: str = "default") -> bool:
+    def reset(self, session_id: str = "default", profile: str = "default") -> bool:
         """Drops a conversation so the next turn starts fresh."""
-        return self._sessions.pop(session_id, None) is not None
+        return self._sessions.pop(f"{profile}::{session_id}", None) is not None

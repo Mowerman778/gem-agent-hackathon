@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=5">
+  <link rel="stylesheet" href="/static/css/style.css?v=6">
 </head>
 <body>
 
@@ -22,6 +22,9 @@
       </div>
       <button class="plan-pill" id="id-btn-plans" onclick="app.openPlans()"
               title="See what Free and Pro include">Free/Pro</button>
+      <button class="who-pill" onclick="app.switchProfile()" title="Switch to a different person">
+        <span id="id-current-profile">—</span> <span class="who-swap">switch</span>
+      </button>
     </div>
     <div style="display: flex; gap: 15px; align-items: center;">
       <span class="status-badge active" id="id-solver-speed-badge">⚡ Ready</span>
@@ -201,7 +204,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=5"></script>
+  <script src="/static/js/app.js?v=6"></script>
   <!-- Ask your helper: chat panel, top right -->
   <aside id="id-chat-panel" class="chat-panel" hidden aria-label="Chat with your helper">
     <div class="chat-head">
@@ -269,6 +272,19 @@
       </div>
 
       <p class="modal-foot">Cancel any time. Click outside this box, press Esc, or use the cross to close.</p>
+    </div>
+  </div>
+
+  <!-- Who is using this device -->
+  <div id="id-signin-overlay" class="modal-overlay">
+    <div class="modal signin" role="dialog" aria-modal="true" aria-labelledby="id-signin-title">
+      <h2 id="id-signin-title" class="modal-title">Who's using SynapseNode?</h2>
+      <p class="modal-sub">Everyone gets their own tasks, settings and helper. Pick your name, or add it.</p>
+      <div id="id-profile-list" class="profile-list"></div>
+      <form class="signin-add" onsubmit="app.addProfile(event)">
+        <input id="id-new-profile" type="text" autocomplete="off" maxlength="40" placeholder="Add a name…" aria-label="New name">
+        <button class="btn-primary" type="submit">Add</button>
+      </form>
     </div>
   </div>
 
