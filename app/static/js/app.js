@@ -18,7 +18,7 @@ const app = {
     if (presetNumber === 1) {
       textEl.value = `Move lawnmower then clear doorway
 Clean garage after moving lawnmower
-Sanitize garden tools
+Clean garden tools
 Water lawn & backyard plants`;
     } else if (presetNumber === 2) {
       textEl.value = `Audit monthly receipts
@@ -97,24 +97,41 @@ Review administrative budget breakdown`;
     // Sort by priority descending
     const sorted = [...this.tasks].sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
 
+    // The solver's utility score is a relative number, meaningless on its own to a
+    // person. Turn position in the sorted list into a phrase they can act on.
+    const open = sorted.filter(t => !t.completed);
+    const rank = {};
+    open.forEach((t, i) => {
+      const third = Math.max(1, Math.ceil(open.length / 3));
+      rank[t.id] = i < third ? { label: 'Do first', cls: 'p-high' }
+                 : i < third * 2 ? { label: 'Next up', cls: 'p-mid' }
+                                 : { label: 'Can wait', cls: 'p-low' };
+    });
+
     container.innerHTML = sorted.map(t => `
       <div class="task-item ${t.completed ? 'completed' : ''}" id="task-card-${t.id}">
         <div class="task-info">
           <div class="task-title">${t.title}</div>
           <div class="task-meta">
-            <span>Effort (E_i): <strong>${t.effort || 5}</strong></span>
-            <span>Req Energy: <strong>${t.required_energy || 5}</strong></span>
-            ${t.prerequisites && t.prerequisites.length > 0 ? `<span>Prereqs: ${t.prerequisites.join(', ')}</span>` : ''}
+            <span>Effort needed: <strong>${t.effort || 5}</strong></span>
+            <span>Energy needed: <strong>${t.required_energy || 5}</strong></span>
+            ${t.prerequisites && t.prerequisites.length > 0 ? `<span>Do after: ${t.prerequisites.map(id => this.taskTitle(id)).join(', ')}</span>` : ''}
           </div>
         </div>
         <div style="display: flex; gap: 12px; align-items: center;">
-          <span class="priority-badge">P_i: ${t.priority_score !== undefined ? t.priority_score : '0.0'}</span>
+          <span class="priority-badge ${(rank[t.id] || {}).cls || ''}"
+                title="Where this sits against everything else on your list right now">${t.completed ? 'Done' : ((rank[t.id] || {}).label || 'Can wait')}</span>
           <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="app.toggleComplete('${t.id}')">
             ${t.completed ? '✓ Completed' : 'Mark Done'}
           </button>
         </div>
       </div>
     `).join("");
+  },
+
+  taskTitle: function(id) {
+    const t = (this.tasks || []).find(x => x.id === id);
+    return t ? t.title : id;
   },
 
   updateEnergy: function(val) {
@@ -160,7 +177,7 @@ Review administrative budget breakdown`;
           <div class="task-item" style="border-left: 3px solid var(--accent-cyan);">
             <div class="task-info">
               <div class="task-title"><strong>#${idx + 1}</strong> ${t.title}</div>
-              <div class="task-meta">Effort: ${t.effort} | Priority Utility Score: ${t.priority_score}</div>
+              <div class="task-meta">Takes about ${t.effort} of your energy</div>
             </div>
             <button class="btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="app.toggleComplete('${t.id}')">Start Task</button>
           </div>
@@ -264,7 +281,73 @@ Review administrative budget breakdown`;
     } catch (e) {
       console.error("Fetch nudges error:", e);
     }
-  }
+  },
+
+  // ---- Ask your helper -------------------------------------------------
+  chatOpen: false,
+  chatSession: 'web-' + Math.random().toString(36).slice(2, 10),
+
+  toggleChat: function() {
+    this.chatOpen = !this.chatOpen;
+    document.getElementById('id-chat-panel').hidden = !this.chatOpen;
+    if (this.chatOpen) document.getElementById('id-chat-text').focus();
+  },
+
+  askSuggested: function(btn) {
+    document.getElementById('id-chat-text').value = btn.textContent;
+    this.sendChat(new Event('submit'));
+  },
+
+  addChatMsg: function(text, who, extraClass) {
+    const log = document.getElementById('id-chat-log');
+    const el = document.createElement('div');
+    el.className = 'chat-msg ' + who + (extraClass ? ' ' + extraClass : '');
+    el.textContent = text;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  },
+
+  sendChat: async function(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const input = document.getElementById('id-chat-text');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    const chips = document.querySelector('.chat-chips');
+    if (chips) chips.remove();
+    this.addChatMsg(text, 'me');
+    const pending = this.addChatMsg('thinking…', 'bot', 'thinking');
+    try {
+      const res = await fetch('/api/partner/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, session_id: this.chatSession })
+      });
+      const data = await res.json();
+      pending.remove();
+      if (!res.ok) {
+        this.addChatMsg(data.detail || 'Your helper is unavailable right now.', 'bot');
+        return;
+      }
+      this.addChatMsg(data.reply || 'Sorry, nothing came back. Try again?', 'bot');
+    } catch (e) {
+      pending.remove();
+      this.addChatMsg('Could not reach your helper. Check your connection and try again.', 'bot');
+    }
+  },
+
+  // ---- Subscription ----------------------------------------------------
+  openPlans: function() { document.getElementById('id-plans-overlay').hidden = false; },
+  closePlans: function() { document.getElementById('id-plans-overlay').hidden = true; },
+  closePlansFromOverlay: function(e) { if (e.target.id === 'id-plans-overlay') this.closePlans(); }
 };
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    app.closePlans();
+    if (app.chatOpen) app.toggleChat();
+  }
+});
 
 document.addEventListener("DOMContentLoaded", () => app.init());
