@@ -7,8 +7,6 @@ solver that can do exactly that — and then deliberately puts a second agent in
 front of it, one whose job is to weigh your energy, health and rest against the
 queue, and to tell you to stop when the signals say stop.
 
-**Hackathon category: Collaborative Partner.**
-
 ---
 
 ## What it does

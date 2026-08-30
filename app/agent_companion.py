@@ -6,8 +6,8 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger("SynapseNode.AgentCompanion")
 
-# Gemini is reached through Vertex AI deliberately: hackathon promotional credits
-# apply to Vertex model usage, while standalone AI Studio API keys bill separately.
+# Gemini is reached through Vertex AI rather than a standalone AI Studio key so
+# model usage bills against the Cloud project.
 # Location must be "global" - every Gemini 3.x model 404s in us-central1, which
 # only serves 2.5 and below. Cloud Run still deploys to us-central1; the two are
 # unrelated settings.
@@ -19,9 +19,9 @@ DEFAULT_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "gen-lang-client-0411709036"
 MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "120"))
 
 SYSTEM_INSTRUCTION = (
-    "You are the behavioural companion inside SynapseNode, a domestic task manager. "
+    "You write short, warm encouragements for someone working through household tasks. "
     "Write a single short nudge to the user: at most 25 words, warm and specific, "
-    "never nagging or guilt-inducing. Open with one relevant emoji. "
+    "never nagging or guilt-inducing. Everyday language only - never mention scores, ratings, measurements, or how anything is calculated. Open with one relevant emoji. "
     "Return only the nudge text, with no quotes and no preamble."
 )
 

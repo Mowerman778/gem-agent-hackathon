@@ -14,7 +14,7 @@ class PubSubService:
     Uses google.cloud.pubsub_v1 to publish and subscribe to topics asynchronously.
     Includes in-memory queue fallback for local testing & execution.
     """
-    def __init__(self, project_id: str = "synapse-node-hackathon"):
+    def __init__(self, project_id: str = "gen-lang-client-0411709036"):
         self.project_id = project_id
         self.using_gcp_native = False
         self.publisher = None

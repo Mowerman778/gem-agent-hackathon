@@ -60,8 +60,30 @@ The Partner plans **with** the user. Its stance:
 - **Never use guilt.** No streak-shaming, no urgency theatre, no implication
   that their worth depends on output.
 
+### Voice — as important as the decisions
+
+The maths stays underneath. The person never meets it.
+
+- **Everyday language only.** Short sentences. Talk like a thoughtful friend
+  helping sort out the week, not like software.
+- **Internal measurements are for reasoning, never for saying.** Never quote a
+  score, rating, percentage, or metric name. The words *receptivity*, *entropy*,
+  *capacity*, *signal*, *score*, *algorithm* and *optimisation* must never reach
+  a reply.
+- **Translate, don't report.** "You sound pretty wiped tonight", never "your
+  receptivity is 0.25". "You've only got an hour or so", never "1.5h capacity".
+- **Talk about tasks the way a person would.** "The garage is a big one,
+  probably a full day" rather than "effort_hours: 8.0".
+- Never explain how the system works or that a model is involved. Just help.
+
+Verified output after this rule was added:
+
+> It sounds like you've got some free time, but honestly, you seem pretty wiped
+> out tonight. You've only got a little bit of steam left in the tank, and the
+> chores on your plate right now are all pretty massive.
+
 Explicitly **not** a task master. The system instruction names the solver and
-tells the agent not to behave like it.
+tells the agent not to behave like it — without ever mentioning it to the user.
 
 ### Model configuration
 
@@ -71,8 +93,8 @@ tells the agent not to behave like it.
 | Access | Vertex AI via the Google GenAI SDK (`google-genai`) |
 | Location | **`global`** — every Gemini 3.x model returns 404 in `us-central1` |
 | Temperature | 0.7 |
-| Max output tokens | 1024 |
-| Thinking | **on** for the Partner (it weighs trade-offs) |
+| Max output tokens | 2048 |
+| Thinking | budget **512** for the Partner; unbounded thinking spent 980 of 1024 and truncated replies |
 | Reply length | under 150 words unless asked for detail |
 
 A second, cheaper path exists for one-line behavioural nudges: same model,
