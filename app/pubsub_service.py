@@ -8,6 +8,10 @@ from typing import Dict, Any, Callable
 
 logger = logging.getLogger("SynapseNode.PubSub")
 
+# Must match the topic and subscription actually provisioned in the project.
+TOPIC = os.getenv("PUBSUB_TOPIC", "synapse-nudges")
+SUBSCRIPTION = os.getenv("PUBSUB_SUBSCRIPTION", "synapse-nudges-sub")
+
 class PubSubService:
     """
     GCP Cloud Pub/Sub service middleware integration layer.
@@ -19,7 +23,10 @@ class PubSubService:
         self.using_gcp_native = False
         self.publisher = None
         self.subscriber = None
-        self.topic_path = f"projects/{project_id}/topics/synapse-agent-nudges"
+        self.topic = TOPIC
+        self.subscription = SUBSCRIPTION
+        self.topic_path = f"projects/{project_id}/topics/{TOPIC}"
+        self.subscription_path = f"projects/{project_id}/subscriptions/{SUBSCRIPTION}"
         self.local_event_queue = queue.Queue()
         self.subscribers = []
         self._init_pubsub()
@@ -27,14 +34,21 @@ class PubSubService:
     def _init_pubsub(self):
         try:
             from google.cloud import pubsub_v1
-            if os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("PUBSUB_EMULATOR_HOST"):
+            # google.auth.default() is the only check that covers all credential
+            # sources: the env var, the ADC file written by `gcloud auth
+            # application-default login`, and the Cloud Run metadata server.
+            # Checking the env var alone meant this never once ran natively.
+            if os.getenv("PUBSUB_EMULATOR_HOST"):
+                have_creds = True
+            else:
+                import google.auth
+                google.auth.default()
+                have_creds = True
+            if have_creds:
                 self.publisher = pubsub_v1.PublisherClient()
                 self.subscriber = pubsub_v1.SubscriberClient()
                 self.using_gcp_native = True
-                logger.info("Connected to GCP Cloud Pub/Sub natively.")
-            else:
-                self.using_gcp_native = False
-                logger.info("GCP credentials not found; running with in-memory Pub/Sub event bus.")
+                logger.info(f"Connected to Cloud Pub/Sub natively (topic={TOPIC}).")
         except Exception as e:
             logger.warning(f"Pub/Sub native init notice: {e}. Defaulting to in-memory event bus.")
             self.using_gcp_native = False

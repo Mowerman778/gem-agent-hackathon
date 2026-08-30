@@ -30,8 +30,8 @@
       "location": "us-central"
     },
     "cloud_pubsub": {
-      "topic_name": "synapse-agent-nudges",
-      "subscription_name": "synapse-agent-nudge-sub",
+      "topic_name": "synapse-nudges",
+      "subscription_name": "synapse-nudges-sub",
       "ack_deadline_seconds": 10,
       "enable_exactly_once_delivery": true
     }
