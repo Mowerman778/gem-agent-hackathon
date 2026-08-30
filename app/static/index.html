@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SynapseNode — Dynamic Task Master & GCP Architecture</title>
-  <meta name="description" content="Algorithmic Task Optimization & Behavioral Agent platform powered by Google Cloud Run, Cloud Firestore, and Cloud Pub/Sub.">
+  <title>SynapseNode — your task and priority helper</title>
+  <meta name="description" content="A friendly helper that sorts your tasks and protects your energy, powered by Google Cloud Run, Cloud Firestore, and Cloud Pub/Sub.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -18,11 +18,11 @@
       <div class="brand-logo">⚡</div>
       <div>
         <h1 class="brand-title">SynapseNode</h1>
-        <p class="brand-subtitle">Algorithmic Domestic Task Orchestration & Behavioral Companion</p>
+        <p class="brand-subtitle">Your task and priority helper</p>
       </div>
     </div>
     <div style="display: flex; gap: 15px; align-items: center;">
-      <span class="status-badge active" id="id-solver-speed-badge">⚡ Sub-150ms Solver Ready</span>
+      <span class="status-badge active" id="id-solver-speed-badge">⚡ Ready</span>
       <button class="btn-secondary" id="id-btn-refresh-status" onclick="app.fetchStatus()">🔄 System Status</button>
     </div>
   </header>
@@ -41,9 +41,9 @@
           <span class="status-badge active">Active Container</span>
         </div>
         <div class="gcp-card-body">
-          <p><strong>Function:</strong> Core REST APIs & 0-1 ILP Task Master Matrix Solver</p>
+          <p><strong>Function:</strong> Runs the app and works out what fits in your day</p>
           <p><strong>Scaling Model:</strong> Auto-scales 0 to 1,000 instances | Serverless Pay-per-ms</p>
-          <p><strong>Latency:</strong> <span class="gcp-pill" id="id-cloud-run-solve-time">Solver: ~110ms</span></p>
+          <p><strong>Latency:</strong> <span class="gcp-pill" id="id-cloud-run-solve-time">~110ms</span></p>
         </div>
       </article>
 
@@ -56,7 +56,7 @@
           <span class="status-badge active" id="id-firestore-mode">Synced NoSQL</span>
         </div>
         <div class="gcp-card-body">
-          <p><strong>Function:</strong> Primary state, client sync & behavioral habit factor persistence</p>
+          <p><strong>Function:</strong> Keeps your tasks and preferences in sync</p>
           <p><strong>Features:</strong> Real-time document sync | Vector search readiness | 99.999% SLA</p>
           <p><strong>State:</strong> <span class="gcp-pill" id="id-firestore-doc-count">0 tasks saved</span></p>
         </div>
@@ -88,7 +88,7 @@
         <!-- Unstructured Task Ingestion Panel -->
         <section class="panel-card" id="id-panel-ingestion">
           <div class="panel-header">
-            <h2 class="panel-title">📥 Unstructured Task Ingestion</h2>
+            <h2 class="panel-title">📥 Add your tasks</h2>
             <span class="status-badge active">NLP Parser</span>
           </div>
 
@@ -119,16 +119,16 @@
           </div>
         </section>
 
-        <!-- Task Master Solver & Energy Capacity Envelope -->
+        <!-- Task planner & Time and energy you have -->
         <section class="panel-card" id="id-panel-solver">
           <div class="panel-header">
-            <h2 class="panel-title">🧮 Task Master ILP Optimization Solver</h2>
+            <h2 class="panel-title">🧮 What can I fit in?</h2>
             <span class="priority-badge" id="id-solver-status">Ready</span>
           </div>
 
           <div class="slider-container">
             <div class="slider-label-row">
-              <label for="id-range-user-energy">User Energy Capacity Envelope (E_capacity):</label>
+              <label for="id-range-user-energy">User Time and energy you have (E_capacity):</label>
               <span id="id-val-user-energy" style="color: var(--accent-cyan); font-weight: 700;">8.0 / 10</span>
             </div>
             <input type="range" id="id-range-user-energy" min="1" max="15" step="0.5" value="8.0" oninput="app.updateEnergy(this.value)">
@@ -164,7 +164,7 @@
         <!-- Live Task Master Queue & Priority Matrix -->
         <section class="panel-card" id="id-panel-queue">
           <div class="panel-header">
-            <h2 class="panel-title">📋 Live Priority Queue & Math Breakdown</h2>
+            <h2 class="panel-title">📋 Your task list</h2>
             <span class="status-badge active" id="id-task-count-badge">0 Tasks</span>
           </div>
 
@@ -175,10 +175,10 @@
           </div>
         </section>
 
-        <!-- Empathetic Agentic Behavioral Companion Panel -->
+        <!-- Empathetic Agentic Helper Panel -->
         <section class="panel-card" id="id-panel-agent">
           <div class="panel-header">
-            <h2 class="panel-title">🤖 Empathetic Agent Companion</h2>
+            <h2 class="panel-title">🤖 Your helper</h2>
             <span class="status-badge active" style="background: rgba(168, 85, 247, 0.2); color: var(--accent-purple);">B(t) Cognitive Throttling</span>
           </div>
 
@@ -209,7 +209,7 @@
   <div class="modal-overlay" id="id-diagnostic-modal" style="display: none;">
     <div class="modal-content">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-        <h3 style="font-size: 18px; font-weight: 700; color: var(--accent-cyan);">⚡ Adaptive Entropy Assessment</h3>
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--accent-cyan);">⚡ A few quick questions</h3>
         <span class="status-badge active">Entropy > 0.25</span>
       </div>
 

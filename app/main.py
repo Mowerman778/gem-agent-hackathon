@@ -20,8 +20,8 @@ from app.pubsub_service import PubSubService
 from app.collaborative_partner import CollaborativePartner
 
 app = FastAPI(
-    title="SynapseNode Core REST API & Task Master Solver",
-    description="Cloud Run stateless container backend hosting 0-1 ILP mathematical task master solver, entropy diagnostic engine, and behavioral agent",
+    title="SynapseNode — your task and priority helper",
+    description="Helps you sort out what to do and when, taking your energy into account",
     version="1.0.0"
 )
 
